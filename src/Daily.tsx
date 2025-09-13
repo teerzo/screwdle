@@ -5,47 +5,157 @@ import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-function FloatingCube({ position, color, speed = 1 }: { position: [number, number, number], color: string, speed?: number }) {
-    const meshRef = useRef<THREE.Mesh>(null);
-    const [hovered, setHovered] = useState(false);
+function RubiksCube() {
+    const groupRef = useRef<THREE.Group>(null);
+    const [removedSpheres, setRemovedSpheres] = useState<Set<string>>(new Set());
+    const [removedCubes, setRemovedCubes] = useState<Set<string>>(new Set());
 
     useFrame((state) => {
-        if (meshRef.current) {
-            meshRef.current.rotation.x += 0.01 * speed;
-            meshRef.current.rotation.y += 0.01 * speed;
-            meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * speed) * 0.5;
+        if (groupRef.current) {
+            // groupRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+            // groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.2) * 0.1;
         }
     });
 
-    return (
-        <Box
-            ref={meshRef}
-            position={position}
-            scale={hovered ? 1.2 : 1}
-            onPointerOver={() => setHovered(true)}
-            onPointerOut={() => setHovered(false)}
-        >
-            <meshStandardMaterial color={color} />
-        </Box>
-    );
-}
-
-function RotatingSphere({ position, color }: { position: [number, number, number], color: string }) {
-    const meshRef = useRef<THREE.Mesh>(null);
-
-    useFrame((state) => {
-        if (meshRef.current) {
-            meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
-            meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+    const handleSphereClick = (sphereId: string, cubeId: string) => {
+        setRemovedSpheres(prev => new Set([...prev, sphereId]));
+        
+        // Check if all spheres on this cube are removed
+        const cubeSpheres = getCubeSpheres(cubeId);
+        const remainingSpheres = cubeSpheres.filter(id => !removedSpheres.has(id) && id !== sphereId);
+        
+        if (remainingSpheres.length === 0) {
+            setRemovedCubes(prev => new Set([...prev, cubeId]));
         }
-    });
+    };
+
+    const getCubeSpheres = (cubeId: string) => {
+        const [x, y, z] = cubeId.split('-').map(Number);
+        const spheres = [];
+        
+        // Only add sphere IDs for outer faces (same logic as InteractiveCube)
+        if (z === 2) spheres.push(`${cubeId}-front`);
+        if (z === 0) spheres.push(`${cubeId}-back`);
+        if (x === 0) spheres.push(`${cubeId}-left`);
+        if (x === 2) spheres.push(`${cubeId}-right`);
+        if (y === 2) spheres.push(`${cubeId}-top`);
+        if (y === 0) spheres.push(`${cubeId}-bottom`);
+        
+        return spheres;
+    };
+
+    // Create a 3x3x3 Rubik's cube
+    const cubeSize = 0.6;
+    const gap = 0.1;
+    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff8800', '#ffffff'];
+
+    const cubes = [];
+    for (let x = 0; x < 3; x++) {
+        for (let y = 0; y < 3; y++) {
+            for (let z = 0; z < 3; z++) {
+                const cubeId = `${x}-${y}-${z}`;
+                const position: [number, number, number] = [
+                    (x - 1) * (cubeSize + gap),
+                    (y - 1) * (cubeSize + gap),
+                    (z - 1) * (cubeSize + gap)
+                ];
+
+                if (removedCubes.has(cubeId)) continue;
+
+                cubes.push(
+                    <InteractiveCube
+                        key={cubeId}
+                        position={position}
+                        size={cubeSize}
+                        color={colors[(x + y + z) % colors.length]}
+                        cubeId={cubeId}
+                        removedSpheres={removedSpheres}
+                        onSphereClick={handleSphereClick}
+                    />
+                );
+            }
+        }
+    }
 
     return (
-        <Sphere ref={meshRef} position={position} args={[0.5, 32, 32]}>
-            <meshStandardMaterial color={color} />
-        </Sphere>
+        <group ref={groupRef}>
+            {cubes}
+        </group>
     );
 }
+
+function InteractiveCube({ position, size, color, cubeId, removedSpheres, onSphereClick }: {
+    position: [number, number, number];
+    size: number;
+    color: string;
+    cubeId: string;
+    removedSpheres: Set<string>;
+    onSphereClick: (sphereId: string, cubeId: string) => void;
+}) {
+    const sphereRadius = size * 0.15;
+    const sphereOffset = size * 0.6;
+    const [x, y, z] = cubeId.split('-').map(Number);
+
+    // Only add spheres on outer faces (faces that are not touching other cubes)
+    const faces = [];
+    
+    // Front face (z = 2)
+    if (z === 2) {
+        faces.push({ id: 'front', position: [0, 0, sphereOffset] as [number, number, number] });
+    }
+    
+    // Back face (z = 0)
+    if (z === 0) {
+        faces.push({ id: 'back', position: [0, 0, -sphereOffset] as [number, number, number] });
+    }
+    
+    // Left face (x = 0)
+    if (x === 0) {
+        faces.push({ id: 'left', position: [-sphereOffset, 0, 0] as [number, number, number] });
+    }
+    
+    // Right face (x = 2)
+    if (x === 2) {
+        faces.push({ id: 'right', position: [sphereOffset, 0, 0] as [number, number, number] });
+    }
+    
+    // Top face (y = 2)
+    if (y === 2) {
+        faces.push({ id: 'top', position: [0, sphereOffset, 0] as [number, number, number] });
+    }
+    
+    // Bottom face (y = 0)
+    if (y === 0) {
+        faces.push({ id: 'bottom', position: [0, -sphereOffset, 0] as [number, number, number] });
+    }
+
+    const sphereColors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b'];
+
+    return (
+        <group position={position}>
+            <Box args={[size, size, size]}>
+                <meshStandardMaterial color={color} />
+            </Box>
+            
+            {faces.map((face, index) => {
+                const sphereId = `${cubeId}-${face.id}`;
+                if (removedSpheres.has(sphereId)) return null;
+                
+                return (
+                    <Sphere
+                        key={sphereId}
+                        position={face.position}
+                        args={[sphereRadius, 16, 16]}
+                        onClick={() => onSphereClick(sphereId, cubeId)}
+                    >
+                        <meshStandardMaterial color={sphereColors[index % sphereColors.length]} />
+                    </Sphere>
+                );
+            })}
+        </group>
+    );
+}
+
 
 function Scene() {
     return (
@@ -72,17 +182,8 @@ function Scene() {
                 SCREWDLE
             </Text>
 
-            {/* Floating Cubes representing letters */}
-            <FloatingCube position={[-2, 0, 0]} color="#6aaa64" speed={1} />
-            <FloatingCube position={[-1, 0, 0]} color="#c9b458" speed={1.2} />
-            <FloatingCube position={[0, 0, 0]} color="#787c7e" speed={0.8} />
-            <FloatingCube position={[1, 0, 0]} color="#6aaa64" speed={1.1} />
-            <FloatingCube position={[2, 0, 0]} color="#c9b458" speed={0.9} />
-
-            {/* Rotating Spheres */}
-            <RotatingSphere position={[-3, 2, -2]} color="#6aaa64" />
-            <RotatingSphere position={[3, 2, -2]} color="#c9b458" />
-            <RotatingSphere position={[0, -2, 2]} color="#787c7e" />
+            {/* Rubik's Cube */}
+            <RubiksCube />
 
             {/* Ground plane */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -3, 0]}>
@@ -133,7 +234,7 @@ export function Daily() {
                 className="flex-grow w-full h-full rounded-2xl overflow-hidden shadow-game border-2 border-border bg-gradient-to-br from-indigo-500 to-purple-600"
             >
                 <Canvas
-                    camera={{ position: [0, 0, 15], fov: 60 }}
+                    camera={{ position: [0, 0, 8], fov: 60 }}
                     style={{ 
                         width: canvasSize.width || '100%', 
                         height: canvasSize.height|| '100%', 
