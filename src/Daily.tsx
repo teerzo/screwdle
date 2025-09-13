@@ -3,6 +3,7 @@ import "./index.css";
 import { OrbitControls, Text, Box, Sphere, Environment, ContactShadows } from '@react-three/drei';
 import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 
 function RubiksCube() {
@@ -23,6 +24,7 @@ function RubiksCube() {
         // Check if all spheres on this cube are removed
         const cubeSpheres = getCubeSpheres(cubeId);
         const remainingSpheres = cubeSpheres.filter(id => !removedSpheres.has(id) && id !== sphereId);
+        
         
         if (remainingSpheres.length === 0) {
             setRemovedCubes(prev => new Set([...prev, cubeId]));
@@ -195,6 +197,7 @@ function Scene() {
 }
 
 export function Daily() {
+    const navigate = useNavigate();
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
@@ -211,24 +214,8 @@ export function Daily() {
     }, []);
 
     return (
-        <div className="flex w-full h-full flex-col min-h-screen rounded-3xl  text-center p-5">
-
-
-
-            {/* <div className="w-full flex-grow bg-red-500">
-
-                TEST
-            </div> */}
-
-
-            {/* <div className="mb-10">
-                    <h1 className="text-6xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-wider">
-                        DAILY SCREWDLE
-                    </h1>
-                    <p className="text-lg text-tertiary font-normal">3D Word Challenge Experience</p>
-                </div> */}
-
-            {/* <div id="canvas-container" className="flex-grow w-full h-full my-5 rounded-2xl overflow-hidden shadow-game border-2 border-border bg-gradient-to-br from-indigo-500 to-purple-600"> */}
+        <div className="flex w-full h-full flex-col min-h-screen rounded-3xl text-center p-5">
+        
             <div 
                 id="canvas-container" 
                 className="flex-grow w-full h-full rounded-2xl overflow-hidden shadow-game border-2 border-border bg-gradient-to-br from-indigo-500 to-purple-600"

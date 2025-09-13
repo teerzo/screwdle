@@ -1,7 +1,9 @@
 
 import "./index.css";
+import { useNavigate } from 'react-router-dom';
 
 export function App() {
+  const navigate = useNavigate();
   return (
     <div className="w-full bg-card rounded-3xl p-10 shadow-game text-center">
       <div className="mb-10">
@@ -27,7 +29,7 @@ export function App() {
           <p className="text-sm text-tertiary mb-5 leading-relaxed">One word per day for everyone</p>
           <button 
             className="w-full py-3 px-5 border-none rounded-xl text-base font-semibold cursor-pointer transition-all duration-300 uppercase tracking-wider bg-secondary text-white hover:bg-yellow-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-secondary/30"
-            onClick={() => (window as any).navigate('/daily')}
+            onClick={() => navigate('/daily')}
           >
             Play Daily
           </button>
