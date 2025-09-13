@@ -95,17 +95,13 @@ function Scene() {
 
 export function Daily() {
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const updateSize = () => {
-            if (containerRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                setCanvasSize({
-                    width: rect.width,
-                    height: rect.height
-                });
-            }
+            setCanvasSize({
+                width: window.innerWidth - 40,
+                height: window.innerHeight - 40
+            });
         };
 
         updateSize();
@@ -133,7 +129,6 @@ export function Daily() {
 
             {/* <div id="canvas-container" className="flex-grow w-full h-full my-5 rounded-2xl overflow-hidden shadow-game border-2 border-border bg-gradient-to-br from-indigo-500 to-purple-600"> */}
             <div 
-                ref={containerRef}
                 id="canvas-container" 
                 className="flex-grow w-full h-full rounded-2xl overflow-hidden shadow-game border-2 border-border bg-gradient-to-br from-indigo-500 to-purple-600"
             >
@@ -141,7 +136,7 @@ export function Daily() {
                     camera={{ position: [0, 0, 15], fov: 60 }}
                     style={{ 
                         width: canvasSize.width || '100%', 
-                        height: canvasSize.height || '100%', 
+                        height: canvasSize.height|| '100%', 
                         borderRadius: '16px' 
                     }}
                 >
