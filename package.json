@@ -10,13 +10,16 @@
     "preview": "bun run build && bun run start"
   },
   "dependencies": {
+    "@react-three/cannon": "^6.6.0",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
+    "@react-three/rapier": "^1.4.0",
     "@types/three": "^0.180.0",
     "react": "^19",
     "react-dom": "^19",
     "react-router-dom": "^7.9.1",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
