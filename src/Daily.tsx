@@ -22,7 +22,10 @@ interface PhysicsCubeData {
     color: string;
 }
 
-function RubiksCube() {
+function RubiksCube({ onScrewClick, onCubeUnfrozen }: {
+    onScrewClick?: () => void;
+    onCubeUnfrozen?: () => void;
+}) {
     const groupRef = useRef<THREE.Group>(null);
     const [removedSpheres, setRemovedSpheres] = useState<Set<string>>(new Set());
     const [removedCubes, setRemovedCubes] = useState<Set<string>>(new Set());
@@ -58,11 +61,6 @@ function RubiksCube() {
     }, [removedCubes]);
 
     const handleSphereClick = (sphereId: string, cubeId: string, position: [number, number, number], rotation: [number, number, number], direction: [number, number, number], color: string) => {
-        // Only allow the first screw to animate - ignore if any animation is already in progress
-        if (animatingSpheresRef.current.size > 0) {
-            return;
-        }
-        
         // Prevent clicking if already animating or removed (check refs for synchronous check)
         if (animatingSpheresRef.current.has(sphereId) || removedSpheresRef.current.has(sphereId)) {
             return;
@@ -70,6 +68,11 @@ function RubiksCube() {
         
         // Mark as animating immediately in ref
         animatingSpheresRef.current.add(sphereId);
+        
+        // Increment score for screw click
+        if (onScrewClick) {
+            onScrewClick();
+        }
         
         // Start animation
         setAnimatingSpheres(prev => new Set([...prev, sphereId]));
@@ -122,6 +125,11 @@ function RubiksCube() {
                     
                     // Mark as pending immediately
                     pendingPhysicsCubesRef.current.add(cubeId);
+                    
+                    // Increment score for cube unfrozen
+                    if (onCubeUnfrozen) {
+                        onCubeUnfrozen();
+                    }
                     
                     // Mark cube as removed
                     setRemovedCubes(prevCubes => {
@@ -230,7 +238,7 @@ function RubiksCube() {
         if (x === 0) spheres.push(`${cubeId}-left`);
         if (x === 2) spheres.push(`${cubeId}-right`);
         if (y === 2) spheres.push(`${cubeId}-top`);
-        if (y === 0) spheres.push(`${cubeId}-bottom`);
+        // if (y === 0) spheres.push(`${cubeId}-bottom`);
         
         return spheres;
     };
@@ -386,6 +394,12 @@ function Screw({ position, rotation, direction, color, onClick, isAnimating }: {
 
     return (
         <group ref={outerGroupRef} position={initialPosition.current} rotation={rotation} onClick={handleClick}>
+            {/* Invisible larger clickable area */}
+            <mesh>
+                <sphereGeometry args={[headRadius * 2.5, 16, 16]} />
+                <meshStandardMaterial transparent opacity={0} />
+            </mesh>
+            
             <group ref={innerGroupRef}>
                 {/* Screw head (wider cylinder) */}
                 <mesh position={[0, headHeight / 2, 0]}>
@@ -669,9 +683,9 @@ function InteractiveCube({ position, size, color, cubeId, removedSpheres, animat
     }
     
     // Bottom face (y = 0)
-    if (y === 0) {
-        faces.push({ id: 'bottom', position: [0, -sphereOffset, 0] as [number, number, number] });
-    }
+    // if (y === 0) {
+    //     faces.push({ id: 'bottom', position: [0, -sphereOffset, 0] as [number, number, number] });
+    // }
 
     const screwColors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b'];
 
@@ -746,7 +760,10 @@ function InteractiveCube({ position, size, color, cubeId, removedSpheres, animat
 }
 
 
-function Scene() {
+function Scene({ onScrewClick, onCubeUnfrozen }: {
+    onScrewClick?: () => void;
+    onCubeUnfrozen?: () => void;
+}) {
     return (
         <Physics gravity={[0, -9.81, 0]}>
             {/* Lighting */}
@@ -772,10 +789,13 @@ function Scene() {
             </Text>
 
             {/* Rubik's Cube */}
-            <RubiksCube />
+            <RubiksCube 
+                onScrewClick={onScrewClick}
+                onCubeUnfrozen={onCubeUnfrozen}
+            />
 
             {/* Ground plane with physics */}
-            <RigidBody type="fixed" position={[0, -5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <RigidBody type="fixed" position={[0, -1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                 <mesh>
                     <planeGeometry args={[100, 100]} />
                     <meshStandardMaterial color="#f5f7fa" transparent opacity={0.3} />
@@ -789,6 +809,8 @@ export function Daily() {
     const navigate = useNavigate();
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
     const [isLoading, setIsLoading] = useState(true);
+    const [timer, setTimer] = useState(0); // Timer in seconds
+    const [score, setScore] = useState(0);
 
     useEffect(() => {
         const updateSize = () => {
@@ -812,8 +834,47 @@ export function Daily() {
         return () => clearTimeout(timer);
     }, []);
 
+    useEffect(() => {
+        // Start timer when loading finishes
+        if (!isLoading) {
+            const interval = setInterval(() => {
+                setTimer(prev => prev + 1);
+            }, 1000);
+
+            return () => clearInterval(interval);
+        }
+    }, [isLoading]);
+
+    // Format timer as MM:SS
+    const formatTimer = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
     return (
         <div className="flex w-full h-full flex-col min-h-screen text-center relative">
+            {/* Header */}
+            <div className="w-full bg-gradient-to-br from-indigo-600 to-purple-700 text-white px-4 py-3 flex items-center justify-between shadow-md z-10">
+                {/* X button on left */}
+                <button
+                    onClick={() => navigate('/')}
+                    className="text-white hover:text-gray-200 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded hover:bg-white/20 transition-colors"
+                    aria-label="Close"
+                >
+                    ×
+                </button>
+                
+                {/* Score in middle */}
+                <div className="text-xl font-bold">
+                    Score: {score}
+                </div>
+                
+                {/* Timer on right */}
+                <div className="text-xl font-bold">
+                    {formatTimer(timer)}
+                </div>
+            </div>
         
             <div 
                 id="canvas-container" 
@@ -828,7 +889,10 @@ export function Daily() {
                     }}
                 >
 
-                    <Scene />
+                    <Scene 
+                        onScrewClick={() => setScore(prev => prev + 10)}
+                        onCubeUnfrozen={() => setScore(prev => prev + 100)}
+                    />
                     <OrbitControls
                         enablePan={true}
                         enableZoom={true}
