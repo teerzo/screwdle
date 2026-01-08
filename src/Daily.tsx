@@ -793,8 +793,8 @@ export function Daily() {
     useEffect(() => {
         const updateSize = () => {
             setCanvasSize({
-                width: window.innerWidth - 40,
-                height: window.innerHeight - 40
+                width: window.innerWidth,
+                height: window.innerHeight
             });
         };
 
